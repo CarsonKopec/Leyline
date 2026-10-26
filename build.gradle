@@ -4,6 +4,8 @@ plugins {
 }
 
 repositories {
+	// Nebulon (lights, rune circles, flat shapes)
+	maven { url = 'https://maven.riftrealms.de/releases' }
 	mavenCentral()
 }
 
@@ -24,6 +26,7 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "de.nexusrealms:nebulon:${project.nebulon_version}"
 }
 
 processResources {
@@ -32,6 +35,8 @@ processResources {
 		loader_version    : project.loader_version,
 		// Minimum versions are the ones we build against.
 		fabric_api_version: project.fabric_api_version,
+		// Nebulon is a 0.x beta, so `~` also rejects its next minor release, which may break the API.
+		nebulon_version   : project.nebulon_version,
 	]
 	inputs.properties props
 
