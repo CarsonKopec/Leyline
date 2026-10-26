@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "leyline",
+	"version": "${version}",
+	"name": "Leyline",
+	"description": "A library for big, world-shaking effects: terrain rules every effect shares, craters carved within a budget, and screen shake, flashes and camera pulls that respect accessibility settings.",
+	"authors": [
+		"1mag1n33"
+	],
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.leyline.Leyline"
+		],
+		"client": [
+			"dev.leyline.client.LeylineClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "leyline.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=${loader_version}",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": ">=${fabric_api_version}"
+	}
+}
