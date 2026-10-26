@@ -41,6 +41,9 @@ Whether an effect may break blocks at all is the calling mod's decision (Adventu
 
 **Screen effects** (`dev.leyline.client.screen`, client)
 
+- `ScreenPass`: a full-screen shader pass drawn into the finished frame, after the world and before the hand and HUD (through Nebulon's post-processing), for what shapes and particles can't draw: light bent round a black hole, the colour drained from part of the world. It runs only while something asks for it each tick, so it costs nothing otherwise. With a shader pack (Iris) or VulkanMod, or once it or Nebulon has failed, it isn't available: check, and draw the effect another way.
+- `ScreenPasses`: the pieces to draw one with: full-screen materials, textures sized to the frame, the draw itself, a copy of the frame to read while drawing over it (made with a draw, as copying textures directly has lost the colour on some drivers), and whether the GPU is Intel's integrated graphics, whose drivers have hung on long chains of passes.
+- `leyline:screen_space.glsl`, a shader include: the ray through each pixel from the depth buffer, projecting points back onto the screen, ray-sphere hits, hashing and a heat-colour ramp. Import `minecraft:projection.glsl` and declare a uniform block holding `ViewMat` (the camera's rotation) first.
 - `ScreenEffects`: camera shake, a flash, a coloured darkening of the view, a wider or narrower field of view, a roll, and a pull of the camera towards something, all for the view only (the player's aim is untouched). Shake, roll and pull follow Screen Effect Scale, the field of view follows FOV Effects, and there is no flash with Hide Lightning Flashes on. Ask for each every tick it should last; Leyline ticks and clears them.
 
 ## Using it
