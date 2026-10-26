@@ -6,6 +6,24 @@ Leyline adds nothing to the game by itself: install it when a mod that needs it 
 
 ## What's in it
 
+**Effect messages** (`dev.leyline.effect`, both sides; `dev.leyline.client.effect`, client)
+
+- `Effect`: one visual event (where, which way, how strong, how old, and what it belongs to). The server sends it once, with `Effects.send`, to every player within 448 blocks who has that chunk loaded, and each client draws its own particles and lights from it, so individual particles never cross the network.
+- `EffectType`: a kind of event. Register yours in `LeylineRegistries.EFFECT_TYPES` in your mod initializer and document what its fields mean. The registry is synced, so a client missing a type the server has is refused at login, naming it.
+- `EffectRenderers`: draw effect types on the client, your own or another mod's; every renderer for a type runs, in registration order. One that throws is logged and switched off, rather than disconnecting the player.
+
+```java
+// Both sides, in your ModInitializer:
+public static final EffectType BURST = Registry.register(LeylineRegistries.EFFECT_TYPES,
+        Identifier.fromNamespaceAndPath("mymod", "burst"), new EffectType());
+
+// Server, where it happens:
+Effects.send(level, BURST, position, Vec3.ZERO, 1, 0, entity.getId());
+
+// Client, in your ClientModInitializer:
+EffectRenderers.register(BURST, (effect, level) -> { /* particles, lights */ });
+```
+
 **Terrain** (`dev.leyline.terrain`, both sides)
 
 - `TerrainRules`: what an effect may do to terrain. Blocks only break where the player behind the effect could break them by hand (spawn protection, claims, the world border), never anything unbreakable or as blast resistant as obsidian. Also: vaporising blocks without drops, scorching a crater's walls to blackstone, basalt and magma, and an explosion calculator that breaks terrain but never hurts or pushes entities, so an effect that deals its own damage hits nothing twice.
