@@ -1,6 +1,7 @@
 package dev.leyline.client.screen;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.DepthTestFunction;
@@ -9,52 +10,57 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import de.nexusrealms.nebulon.api.render.client.ShaderMaterial;
 import dev.leyline.Leyline;
 import java.util.Locale;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 /**
- * Pieces for drawing a {@link ScreenPass}: materials that cover the whole screen, textures sized to the frame, the draw
+ * Pieces for drawing a {@link ScreenPass}: pipelines that cover the whole screen, textures sized to the frame, the draw
  * itself, and a copy of the frame to read while drawing over it. Shaders can import {@code leyline:screen_space.glsl}
  * for the ray through each pixel and the geometry to draw with. Render thread only.
  */
 public final class ScreenPasses {
-    private static final Identifier VERTEX = Identifier.fromNamespaceAndPath("nebulon", "core/fullscreen_triangle");
+    /** Minecraft's own full-screen triangle, which hands the fragment shader {@code texCoord}. */
+    private static final Identifier SCREEN_QUAD = Identifier.withDefaultNamespace("core/screenquad");
     private static final Matrix4f IDENTITY = new Matrix4f();
-    private static ShaderMaterial copy;
+    private static RenderPipeline copy;
     private static Boolean intelIntegrated;
 
     private ScreenPasses() {
     }
 
     /**
-     * A material named {@code name} that draws over the whole screen, with Nebulon's full-screen triangle and the fragment
-     * shader {@code fragment} ({@code mymod:core/glow} for {@code assets/mymod/shaders/core/glow.fsh}): opaque, with no
-     * depth test. Add its samplers and uniform blocks, then build it; its shader reads {@code texCoord}.
+     * A pipeline named {@code name} that draws over the whole screen with the fragment shader {@code fragment}
+     * ({@code mymod:core/glow} for {@code assets/mymod/shaders/core/glow.fsh}): opaque, with no depth test. Its shader
+     * reads {@code texCoord}, and may import {@code minecraft:projection.glsl}. Add its samplers
+     * ({@code withSampler}) and uniform blocks ({@code withUniform}, as {@code UNIFORM_BUFFER}), and a blend if it
+     * needs one, then build it.
      */
-    public static ShaderMaterial.Builder fullScreen(Identifier name, Identifier fragment) {
-        return ShaderMaterial.builder(name)
-                .shaders(VERTEX, fragment)
-                .geometry(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
-                .transparency(ShaderMaterial.Transparency.OPAQUE)
-                .depth(DepthTestFunction.NO_DEPTH_TEST, false)
-                .cull(false);
+    public static RenderPipeline.Builder fullScreen(Identifier name, Identifier fragment) {
+        return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+                .withLocation(name)
+                .withVertexShader(SCREEN_QUAD)
+                .withFragmentShader(fragment)
+                .withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
+                .withoutBlend()
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withDepthWrite(false)
+                .withCull(false);
     }
 
     /**
-     * Compiles {@code materials} now. A shader that fails to compile draws nothing at all, rather than throwing, so this
+     * Compiles {@code pipelines} now. A shader that fails to compile draws nothing at all, rather than throwing, so this
      * throws instead, naming {@code what}; a {@link ScreenPass} then switches itself off.
      */
-    public static void precompile(String what, ShaderMaterial... materials) {
-        for (ShaderMaterial material : materials) {
-            material.precompile();
-            if (!RenderSystem.getDevice().precompilePipeline(material.pipeline()).isValid()) {
+    public static void precompile(String what, RenderPipeline... pipelines) {
+        for (RenderPipeline pipeline : pipelines) {
+            if (!RenderSystem.getDevice().precompilePipeline(pipeline).isValid()) {
                 throw new IllegalStateException(what + " did not compile; see the log above");
             }
         }
@@ -74,11 +80,11 @@ public final class ScreenPasses {
         return RenderSystem.getDynamicUniforms().writeTransform(IDENTITY, new Vector4f(1), new Vector3f(), IDENTITY);
     }
 
-    /** Draws {@code material} over the whole of {@code target}; {@code inputs} binds its textures and uniform blocks. */
-    public static void draw(RenderTarget target, String label, ShaderMaterial material, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
+    /** Draws {@code pipeline} over the whole of {@code target}; {@code inputs} binds its textures and uniform blocks. */
+    public static void draw(RenderTarget target, String label, RenderPipeline pipeline, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
         try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                 () -> label, target.getColorTextureView(), OptionalInt.empty())) {
-            pass.setPipeline(material.pipeline());
+            pass.setPipeline(pipeline);
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("DynamicTransforms", transforms);
             inputs.accept(pass);
@@ -88,12 +94,11 @@ public final class ScreenPasses {
 
     /**
      * Copies {@code from}'s colour into {@code into}, for a pass to read while it draws over {@code from}. It copies with a
-     * draw: copying textures directly ({@code copyTextureToTexture}, as Nebulon's compositor does) has lost the colour on
-     * some graphics drivers.
+     * draw: copying textures directly ({@code copyTextureToTexture}) has lost the colour on some graphics drivers.
      */
     public static void copy(RenderTarget from, TextureTarget into, GpuBufferSlice transforms) {
         if (copy == null) {
-            ShaderMaterial built = fullScreen(Leyline.id("copy"), Leyline.id("core/copy")).sampler("InSampler").build();
+            RenderPipeline built = fullScreen(Leyline.id("copy"), Leyline.id("core/copy")).withSampler("InSampler").build();
             precompile("Leyline's frame copy", built);
             copy = built;
         }
