@@ -74,6 +74,8 @@ and declare it in your `fabric.mod.json`: `"leyline": "~0.1.0"`. Players install
 | --- | --- |
 | Build the mod JAR | `gradlew.bat build` → `build/libs/` |
 | Publish to the local Maven repository | `gradlew.bat publishToMavenLocal` |
+| Upload a release to Modrinth and CurseForge | `gradlew.bat publishMods`: see [docs/releasing.md](docs/releasing.md). Without tokens it's a dry run into `build/publishMods/` |
+| Redraw the icon | `python tools/generate_icon.py` (needs `pip install numpy pillow`) |
 
 ## License
 

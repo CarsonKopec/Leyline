@@ -7,7 +7,13 @@
 	"authors": [
 		"1mag1n33"
 	],
+	"contact": {
+		"homepage": "https://github.com/CarsonKopec/Leyline",
+		"sources": "https://github.com/CarsonKopec/Leyline",
+		"issues": "https://github.com/CarsonKopec/Leyline/issues"
+	},
 	"license": "CC0-1.0",
+	"icon": "assets/leyline/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
@@ -29,5 +35,10 @@
 		"java": ">=21",
 		"fabric-api": ">=${fabric_api_version}",
 		"nebulon": "~${nebulon_version}"
+	},
+	"custom": {
+		"modmenu": {
+			"badges": ["library"]
+		}
 	}
 }
