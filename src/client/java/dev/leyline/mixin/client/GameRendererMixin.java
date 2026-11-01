@@ -1,5 +1,6 @@
 package dev.leyline.mixin.client;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.leyline.client.render.AfterWorld;
@@ -7,6 +8,7 @@ import dev.leyline.client.screen.ScreenEffects;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
+import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -31,10 +33,14 @@ abstract class GameRendererMixin {
         if (roll != 0) poseStack.mulPose(Axis.ZP.rotationDegrees(roll));
     }
 
-    /** The world is drawn, its depth still in the main target; the hand comes next. */
+    /**
+     * The world is drawn, its depth still in the main target; the hand comes next. The first two matrices in
+     * {@code renderLevel} are the world's projection and the camera's rotation.
+     */
     @Inject(method = "renderLevel", at = @At(value = "INVOKE_STRING",
             target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", args = "ldc=hand"))
-    private void leyline$afterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
-        AfterWorld.draw(deltaTracker);
+    private void leyline$afterWorld(DeltaTracker deltaTracker, CallbackInfo ci,
+                                    @Local(ordinal = 0) Matrix4f projection, @Local(ordinal = 1) Matrix4f view) {
+        AfterWorld.draw(deltaTracker, projection, view);
     }
 }

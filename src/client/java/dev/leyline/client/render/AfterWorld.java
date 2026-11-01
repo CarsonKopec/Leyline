@@ -8,6 +8,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +34,10 @@ public final class AfterWorld {
 
     /**
      * The frame being drawn: the main target, holding the finished world and its depth; the camera it was drawn from;
-     * and how far the frame is between ticks.
+     * how far the frame is between ticks; and the matrices the world was drawn with, the projection (view bobbing
+     * included) and the camera's rotation, which take a position relative to the camera to the screen.
      */
-    public record Frame(RenderTarget main, Camera camera, float partialTick) {
+    public record Frame(RenderTarget main, Camera camera, float partialTick, Matrix4fc projection, Matrix4fc view) {
     }
 
     /** One drawer's place in the order. {@link #remove} takes it out. */
@@ -83,12 +86,12 @@ public final class AfterWorld {
      * Called by Leyline's mixin into world rendering. A drawer that throws is logged and removed, so one broken effect
      * can't take the frame, or the game, down with it.
      */
-    public static void draw(DeltaTracker deltaTracker) {
+    public static void draw(DeltaTracker deltaTracker, Matrix4f projection, Matrix4f view) {
         Registration[] drawers = snapshot;
         if (drawers.length == 0) return;
         Minecraft client = Minecraft.getInstance();
         Frame frame = new Frame(client.getMainRenderTarget(), client.gameRenderer.getMainCamera(),
-                deltaTracker.getGameTimeDeltaPartialTick(true));
+                deltaTracker.getGameTimeDeltaPartialTick(true), new Matrix4f(projection), new Matrix4f(view));
         for (Registration registration : drawers) {
             if (registration.removed) continue;
             try {

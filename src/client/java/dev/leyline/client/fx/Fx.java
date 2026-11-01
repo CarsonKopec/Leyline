@@ -1,14 +1,15 @@
 package dev.leyline.client.fx;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.NebulonRendering;
-import de.nexusrealms.nebulon.api.render.WorldEffect;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
-import de.nexusrealms.nebulon.api.render.effect.SdfPlane;
 import de.nexusrealms.nebulon.api.render.light.PointLight;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.Shape;
+import dev.leyline.client.render.ShapeHandle;
+import dev.leyline.client.render.Shapes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -24,21 +25,16 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Tools for drawing effects: Nebulon shapes and lights that update in place, particles that follow the Particles
- * setting, and {@link Tracker}s that run each effect's animations.
- *
- * <p>Nebulon 0.1.2 has three traps these work around. Its additive blend ignores alpha, so a {@link MagicCircle} adds
- * most of its colour across its whole disc and turns into a flat plate in daylight: circles' lines are drawn with crisp
- * {@link SdfPlane}s ({@link Planes}), with magic circles kept dim, for runes only. Its billboard renderer can stall the
- * game when a frame draws billboards with more than one texture, so use billboards sparingly, with one texture. And
- * its volumetric fog softens the whole frame, so nothing here uses it.
+ * Tools for drawing effects: Leyline's {@linkplain Shapes shapes} and Nebulon's lights that update in place, particles
+ * that follow the Particles setting, and {@link Tracker}s that run each effect's animations. Flat shapes redrawn every
+ * tick go through {@link Planes}.
  *
  * <p>Every Nebulon call must run inside {@link NebulonGuard#guarded}.
  */
 public final class Fx {
     public static final Vec3 UP = new Vec3(0, 1, 0), DOWN = new Vec3(0, -1, 0);
-    /** How far away Nebulon draws what these make. */
-    public static final double RENDER_DISTANCE = 448;
+    /** How far away lights and shapes are drawn. */
+    public static final double RENDER_DISTANCE = Shapes.RENDER_DISTANCE;
     /** Effects this far from the camera spawn no particles; their lights and shapes still show. */
     public static final double PARTICLE_RANGE = 192;
 
@@ -64,38 +60,43 @@ public final class Fx {
         return 1 - (1 - t) * (1 - t) * (1 - t);
     }
 
-    /** The colour at {@code f} of its strength. Additive, so dimming means scaling the colour itself, not alpha alone. */
-    public static ColorRgba scaled(ColorRgba color, float f) {
+    /** The colour at {@code f} of its strength: every channel scaled, as colours are premultiplied ({@link Rgba}). */
+    public static Rgba scaled(Rgba color, float f) {
         f = Mth.clamp(f, 0, 1);
-        return new ColorRgba(color.red() * f, color.green() * f, color.blue() * f, color.alpha() * f);
+        return new Rgba(color.red() * f, color.green() * f, color.blue() * f, color.alpha() * f);
     }
 
     /** The colour, {@code amount} of the way to white. */
-    public static ColorRgba whiter(ColorRgba color, float amount) {
-        return new ColorRgba(Mth.lerp(amount, color.red(), 1), Mth.lerp(amount, color.green(), 1), Mth.lerp(amount, color.blue(), 1), color.alpha());
+    public static Rgba whiter(Rgba color, float amount) {
+        return new Rgba(Mth.lerp(amount, color.red(), 1), Mth.lerp(amount, color.green(), 1), Mth.lerp(amount, color.blue(), 1), color.alpha());
     }
 
-    // Nebulon: each creates its handle on first use, then updates it in place.
+    /** The colour for Nebulon's lights. */
+    public static ColorRgba nebulon(Rgba color) {
+        return new ColorRgba(color.red(), color.green(), color.blue(), color.alpha());
+    }
 
-    public static <E extends WorldEffect> EffectHandle<E> show(EffectHandle<E> handle, E effect) {
+    // Shapes and lights: each creates its handle on first use, then updates it in place.
+
+    public static <S extends Shape> ShapeHandle<S> show(ShapeHandle<S> handle, S shape) {
         if (handle != null && handle.isAlive()) {
-            handle.set(effect);
+            handle.set(shape);
             return handle;
         }
-        return NebulonRendering.effects().spawn(world(), effect);
+        return Shapes.add(shape);
     }
 
-    public static <E extends WorldEffect> EffectHandle<E> hide(EffectHandle<E> handle) {
+    public static <S extends Shape> ShapeHandle<S> hide(ShapeHandle<S> handle) {
         if (handle != null) handle.remove();
         return null;
     }
 
-    public static MagicCircle circle(Vec3 center, Vec3 normal, double radius, float lineWidth, ColorRgba color, int layers, long seed, float spin) {
-        return new MagicCircle(center, normal, Math.max(0.05, radius), lineWidth, color, layers, seed, spin, RENDER_DISTANCE);
+    public static RuneCircle circle(Vec3 center, Vec3 normal, double radius, float lineWidth, Rgba color, int layers, long seed, float spin) {
+        return new RuneCircle(center, normal, Math.max(0.05, radius), lineWidth, color, layers, seed, spin);
     }
 
-    public static PointLightHandle light(PointLightHandle handle, Vec3 at, float radius, float brightness, ColorRgba color) {
-        PointLight light = NebulonLights.point(at).color(color).radius(Mth.clamp(radius, 0.5f, 128)).brightness(Mth.clamp(brightness, 0, 64))
+    public static PointLightHandle light(PointLightHandle handle, Vec3 at, float radius, float brightness, Rgba color) {
+        PointLight light = NebulonLights.point(at).color(nebulon(color)).radius(Mth.clamp(radius, 0.5f, 128)).brightness(Mth.clamp(brightness, 0, 64))
                 .maxRenderDistance(RENDER_DISTANCE).build();
         if (handle != null && handle.isAlive()) {
             handle.set(light);
@@ -155,7 +156,7 @@ public final class Fx {
         default void releaseLocal() {
         }
 
-        /** Lets go of its Nebulon handles. */
+        /** Lets go of its shapes and lights. */
         void release();
     }
 
@@ -226,89 +227,6 @@ public final class Fx {
 
         public void clear() {
             for (Tracker<?> tracker : trackers) tracker.clear();
-        }
-    }
-
-    /**
-     * Flat shapes redrawn every tick: {@link #begin}, draw this tick's shapes, then {@link #end}, which removes any left
-     * over from last tick. Handles are reused in drawing order, so a steady set of shapes just updates in place.
-     */
-    public static final class Planes {
-        private final List<EffectHandle<SdfPlane>> handles = new ArrayList<>();
-        private int used;
-
-        public void begin() {
-            used = 0;
-        }
-
-        public void ring(Vec3 center, Vec3 normal, double radius, float line, ColorRgba color) {
-            if (radius <= line) return;
-            draw(SdfPlane.ring().at(center).normal(normal).size((float) (radius * 2)).lineWidth(line).color(color)
-                    .maxRenderDistance(RENDER_DISTANCE).build());
-        }
-
-        public void arc(Vec3 center, Vec3 normal, double radius, float line, float from, float to, ColorRgba color) {
-            if (radius <= line) return;
-            draw(SdfPlane.arc().arc(from, to).at(center).normal(normal).size((float) (radius * 2)).lineWidth(line).color(color)
-                    .maxRenderDistance(RENDER_DISTANCE).build());
-        }
-
-        public void polygon(Vec3 center, Vec3 normal, double radius, int sides, float turn, float line, ColorRgba color) {
-            if (radius <= line) return;
-            draw(SdfPlane.builder(SdfPlane.Shape.POLYGON).polygon(sides, turn).at(center).normal(normal).size((float) (radius * 2))
-                    .lineWidth(line).color(color).maxRenderDistance(RENDER_DISTANCE).build());
-        }
-
-        /**
-         * A glowing ball: three discs facing the camera, each smaller one adding more light, so the centre is
-         * brightest. Turned towards the camera each tick.
-         */
-        public void glow(Vec3 center, float radius, ColorRgba color) {
-            if (radius <= 0.05f) return;
-            Vec3 toCamera = camera().subtract(center);
-            Vec3 facing = toCamera.lengthSqr() < 1.0e-6 ? UP : toCamera.normalize();
-            float[] sizes = {1, 0.7f, 0.4f}, strengths = {0.22f, 0.3f, 0.48f};
-            for (int i = 0; i < sizes.length; i++) {
-                draw(SdfPlane.circle().at(center.add(facing.scale(i * 0.05))).normal(facing).size(radius * 2 * sizes[i])
-                        .color(scaled(color, strengths[i])).maxRenderDistance(RENDER_DISTANCE).build());
-            }
-        }
-
-        /** A ring turned to face the camera: a halo. */
-        public void halo(Vec3 center, double radius, float line, ColorRgba color) {
-            Vec3 toCamera = camera().subtract(center);
-            ring(center, toCamera.lengthSqr() < 1.0e-6 ? UP : toCamera.normalize(), radius, line, color);
-        }
-
-        /**
-         * A seal of radius {@code outer}: a bold outer ring with a fine one inside it, framing a star of {@code points}
-         * (two polygons of half as many sides, the second turned between the first's corners) turned by {@code turn}.
-         */
-        public void seal(Vec3 center, Vec3 normal, double outer, float line, int points, float turn, ColorRgba color) {
-            if (outer < 0.5) return;
-            ring(center, normal, outer, line, color);
-            ring(center, normal, outer * 0.9, line * 0.45f, scaled(color, 0.8f));
-            int sides = points / 2;
-            polygon(center, normal, outer * 0.86, sides, turn, line * 0.6f, scaled(color, 0.85f));
-            polygon(center, normal, outer * 0.86, sides, turn + Mth.PI / sides, line * 0.6f, scaled(color, 0.85f));
-        }
-
-        private void draw(SdfPlane plane) {
-            if (used < handles.size()) handles.set(used, show(handles.get(used), plane));
-            else handles.add(show(null, plane));
-            used++;
-        }
-
-        public void end() {
-            while (handles.size() > used) handles.removeLast().remove();
-        }
-
-        public void clear() {
-            used = 0;
-            while (!handles.isEmpty()) {
-                EffectHandle<SdfPlane> handle = handles.removeLast();
-                NebulonGuard.cleanup(handle::remove);
-            }
         }
     }
 }
