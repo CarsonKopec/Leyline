@@ -144,18 +144,15 @@ public final class Fx {
         /** Advances a tick; returns true once it's over. */
         boolean tick();
 
-        /** Non-Nebulon resources must still be released if its renderer has failed. */
-        default void releaseLocal() {
-        }
-
-        /** Lets go of its shapes and lights. */
+        /** Lets go of its shapes, lights and anything else it holds. */
         void release();
     }
 
     /**
      * An effect's running animations, keyed by the effects' source id. Everything belongs to the world it started in,
      * and a dimension change drops it. A mod ticks and clears its trackers together, in its own order, through
-     * {@link Trackers}.
+     * {@link Trackers}. An animation that throws is logged ({@link EffectGuard}), released and dropped; the rest
+     * carry on.
      */
     public static final class Tracker<T extends Animation> {
         private final Map<Integer, T> live = new HashMap<>();
@@ -174,19 +171,22 @@ public final class Fx {
             ensureWorld(level);
             for (Iterator<T> it = live.values().iterator(); it.hasNext(); ) {
                 T animation = it.next();
-                if (animation.tick()) {
-                    animation.releaseLocal();
-                    NebulonGuard.cleanup(animation::release);
+                boolean over;
+                try {
+                    over = animation.tick();
+                } catch (RuntimeException | LinkageError e) {
+                    EffectGuard.failed(e);
+                    over = true;
+                }
+                if (over) {
+                    EffectGuard.guarded(animation::release);
                     it.remove();
                 }
             }
         }
 
         void clear() {
-            live.values().forEach(animation -> {
-                animation.releaseLocal();
-                NebulonGuard.cleanup(animation::release);
-            });
+            live.values().forEach(animation -> EffectGuard.guarded(animation::release));
             live.clear();
             world = null;
         }

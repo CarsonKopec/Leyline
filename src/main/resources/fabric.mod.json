@@ -3,7 +3,7 @@
 	"id": "leyline",
 	"version": "${version}",
 	"name": "Leyline",
-	"description": "A library for big, world-shaking effects: compact effect messages from server to client, terrain rules every effect shares, craters carved within a budget, Nebulon lights and shapes kept safe, and screen shake, flashes and camera pulls that respect accessibility settings.",
+	"description": "A rendering library for big, world-shaking effects: smooth coloured lights, crisp rune circles, rings, lightning and beams, full-screen shader passes, compact effect messages from server to client, terrain rules every effect shares, craters carved within a budget, and screen shake, flashes and camera pulls that respect accessibility settings.",
 	"authors": [
 		"1mag1n33"
 	],
@@ -33,8 +33,7 @@
 		"fabricloader": ">=${loader_version}",
 		"minecraft": "~1.21.11",
 		"java": ">=21",
-		"fabric-api": ">=${fabric_api_version}",
-		"nebulon": "~${nebulon_version}"
+		"fabric-api": ">=${fabric_api_version}"
 	},
 	"custom": {
 		"modmenu": {

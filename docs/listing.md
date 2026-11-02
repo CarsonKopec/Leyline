@@ -4,7 +4,7 @@ The text for the Modrinth and CurseForge project pages. Paste the summary into t
 
 ## Summary
 
-A library for big, world-shaking effects: effect messages, shared terrain rules, budgeted craters, safe Nebulon visuals, full-screen shader passes and screen shake.
+A rendering library for big effects: smooth coloured lights, crisp rune circles, lightning and beams, shader passes, effect messages and shared terrain rules.
 
 ## Description
 
@@ -12,13 +12,14 @@ A library for big, world-shaking effects: effect messages, shared terrain rules,
 
 It gives mods the groundwork for big effects:
 
+- **Its own renderer:** rune circles, rings, seals, lightning and beams that stay crisp at any distance and read in daylight, smooth coloured lights with no speckle, and full-screen shader passes for effects like black holes. No shader pack is needed.
 - **Effect messages:** the server sends one small message per visual event to players nearby, and each client draws its own particles and lights from it. Individual particles never cross the network.
 - **Terrain rules:** effects only break blocks where the player behind them could break them by hand, which respects spawn protection, claims and the world border. They never break unbreakable blocks or anything as blast resistant as obsidian.
 - **Craters:** carved over a few ticks within a budget, so a big one doesn't stall the server, and optionally scorched to blackstone, basalt and magma.
-- **Safe visuals:** every call into Nebulon is guarded. If Nebulon fails, Leyline logs it once and switches it off for the session, and the player stays connected.
-- **Screen effects:** full-screen shader passes, and camera shake, flashes, darkening and camera pulls. These follow the Screen Effect Scale, FOV Effects and Hide Lightning Flashes settings.
+- **Screen effects:** camera shake, flashes, darkening and camera pulls. These follow the Screen Effect Scale, FOV Effects and Hide Lightning Flashes settings.
 
 ### Before you install
 
-- **It needs these mods:** Fabric API and Nebulon. Nebulon 0.1.2-beta+mc1.21.11.20260928.19 is published by NexusRealms.
+- **It needs:** Fabric API.
+- **Shader packs (Iris) and VulkanMod:** Leyline's own drawing switches off under them, and effects fall back to particles.
 - **For mod developers:** the API is documented on [GitHub](https://github.com/CarsonKopec/Leyline).

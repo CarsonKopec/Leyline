@@ -4,9 +4,7 @@
 
 Release Leyline before any mod that needs it: [Arcane Spells](https://github.com/CarsonKopec/ArcaneMod) lists it as a required mod by its slug, `leyline`, which must exist on both sites first.
 
-## Blocker: Nebulon
-
-Leyline requires [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/), which is on neither Modrinth nor CurseForge and is All Rights Reserved. Modrinth requires every dependency to be listed as a Modrinth project, and CurseForge doesn't allow external download links for files. Settle this before the first release: [Arcane Spells' docs/releasing.md](https://github.com/CarsonKopec/ArcaneMod/blob/main/docs/releasing.md#blocker-nebulon) sets out the options. Once Nebulon is on both sites, add `requires('nebulon')` beside `fabric-api` in `build.gradle`.
+Leyline's only requirement is Fabric API, which `build.gradle` lists for both sites.
 
 ## The first time
 
