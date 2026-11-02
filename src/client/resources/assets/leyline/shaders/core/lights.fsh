@@ -2,7 +2,8 @@
 
 // One light on the finished frame. Each pixel's position comes back from the depth it was drawn at, and its surface's
 // facing from its neighbours'; the light adds its colour times the surface's own, fading smoothly to nothing at its
-// radius, most on the surfaces turned towards it. There's no dithering: the light is smooth.
+// radius, most on the surfaces turned towards it. There's no dithering: the light is smooth. A strong light eases off
+// as it grows, so it brightens a surface a long way without flattening it to white.
 
 #moj_import <leyline:lights.glsl>
 
@@ -12,6 +13,9 @@ uniform sampler2D SceneColor;
 flat in int light;
 
 out vec4 fragColor;
+
+// The most light can add: this many times the surface's own colour.
+const float MAX_LIGHT = 1.4;
 
 vec3 positionAt(ivec2 pixel) {
     float depth = texelFetch(SceneDepth, pixel, 0).r;
@@ -59,5 +63,7 @@ void main() {
     vec3 frame = texelFetch(SceneColor, pixel, 0).rgb;
     float luma = dot(frame, vec3(0.2126, 0.7152, 0.0722));
     vec3 surface = frame * (0.65 + 0.35 / (luma + 0.1));
-    fragColor = vec4(surface * color.rgb * (falloff * facing * Screen.z), 0.0);
+    vec3 lit = color.rgb * (falloff * facing * Screen.z);
+    lit = MAX_LIGHT * (1.0 - exp(-lit / MAX_LIGHT));
+    fragColor = vec4(surface * lit, 0.0);
 }

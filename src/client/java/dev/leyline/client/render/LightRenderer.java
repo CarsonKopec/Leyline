@@ -37,7 +37,7 @@ final class LightRenderer {
     private static final int PER_BATCH = 128;
     private static final int FLOATS = 12;
     /** How strongly lights light: what a light of brightness 1 adds, at its heart, times the surface's colour. */
-    private static final float STRENGTH = 0.6f;
+    private static final float STRENGTH = 0.5f;
 
     private static float[] data = new float[FLOATS * 32];
     private static int count;
