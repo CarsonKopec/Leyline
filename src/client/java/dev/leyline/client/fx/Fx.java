@@ -1,10 +1,10 @@
 package dev.leyline.client.fx;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.light.PointLight;
-import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
+import dev.leyline.client.render.Light;
+import dev.leyline.client.render.LightHandle;
+import dev.leyline.client.render.Lights;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.RuneCircle;
 import dev.leyline.client.render.Shape;
@@ -25,11 +25,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Tools for drawing effects: Leyline's {@linkplain Shapes shapes} and Nebulon's lights that update in place, particles
- * that follow the Particles setting, and {@link Tracker}s that run each effect's animations. Flat shapes redrawn every
- * tick go through {@link Planes}.
- *
- * <p>Every Nebulon call must run inside {@link NebulonGuard#guarded}.
+ * Tools for drawing effects: Leyline's {@linkplain Shapes shapes} and {@linkplain Lights lights} that update in place,
+ * particles that follow the Particles setting, and {@link Tracker}s that run each effect's animations. Flat shapes
+ * redrawn every tick go through {@link Planes}.
  */
 public final class Fx {
     public static final Vec3 UP = new Vec3(0, 1, 0), DOWN = new Vec3(0, -1, 0);
@@ -71,11 +69,6 @@ public final class Fx {
         return new Rgba(Mth.lerp(amount, color.red(), 1), Mth.lerp(amount, color.green(), 1), Mth.lerp(amount, color.blue(), 1), color.alpha());
     }
 
-    /** The colour for Nebulon's lights. */
-    public static ColorRgba nebulon(Rgba color) {
-        return new ColorRgba(color.red(), color.green(), color.blue(), color.alpha());
-    }
-
     // Shapes and lights: each creates its handle on first use, then updates it in place.
 
     public static <S extends Shape> ShapeHandle<S> show(ShapeHandle<S> handle, S shape) {
@@ -95,17 +88,16 @@ public final class Fx {
         return new RuneCircle(center, normal, Math.max(0.05, radius), lineWidth, color, layers, seed, spin);
     }
 
-    public static PointLightHandle light(PointLightHandle handle, Vec3 at, float radius, float brightness, Rgba color) {
-        PointLight light = NebulonLights.point(at).color(nebulon(color)).radius(Mth.clamp(radius, 0.5f, 128)).brightness(Mth.clamp(brightness, 0, 64))
-                .maxRenderDistance(RENDER_DISTANCE).build();
+    public static LightHandle<PointLight> light(LightHandle<PointLight> handle, Vec3 at, float radius, float brightness, Rgba color) {
+        PointLight light = new PointLight(at, color, Mth.clamp(radius, 0.5f, 128), Mth.clamp(brightness, 0, 64));
         if (handle != null && handle.isAlive()) {
             handle.set(light);
             return handle;
         }
-        return NebulonLights.lights().add(world(), light);
+        return Lights.add(light);
     }
 
-    public static PointLightHandle unlight(PointLightHandle handle) {
+    public static <L extends Light> LightHandle<L> unlight(LightHandle<L> handle) {
         if (handle != null) handle.close();
         return null;
     }
