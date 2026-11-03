@@ -82,11 +82,11 @@ repositories {
 }
 
 dependencies {
-	modImplementation "dev.leyline:leyline:0.1.0"
+	modImplementation "dev.leyline:leyline:0.1.1"
 }
 ```
 
-and declare it in your `fabric.mod.json`: `"leyline": "~0.1.0"`. Players install the Leyline JAR alongside your mod, along with Fabric API.
+and declare it in your `fabric.mod.json`: `"leyline": "~0.1.1"`. Players install the Leyline JAR alongside your mod, along with Fabric API.
 
 ## Build
 
